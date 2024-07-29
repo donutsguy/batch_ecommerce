@@ -27,7 +27,7 @@ defmodule BatchEcommerceWeb.Router do
 
     get "/", PageController, :home
   end
-
+  
   # Other scopes may use custom stacks.
   scope "/api", BatchEcommerceWeb do
     pipe_through [:api, :auth]
