@@ -14,6 +14,14 @@ defmodule BatchEcommerceWeb.Router do
     plug :accepts, ["json"]
   end
 
+  pipeline :auth do
+    plug BatchEcommerce.Contas.Pipeline
+  end
+
+  pipeline :ensure_auth do
+    plug Guardian.Plug.EnsureAuthenticated
+  end
+
   scope "/", BatchEcommerceWeb do
     pipe_through :browser
 
@@ -21,9 +29,19 @@ defmodule BatchEcommerceWeb.Router do
   end
 
   # Other scopes may use custom stacks.
-  # scope "/api", BatchEcommerceWeb do
-  #   pipe_through :api
-  # end
+  scope "/api", BatchEcommerceWeb do
+    pipe_through [:api, :auth]
+
+    post "/responsaveis", ResponsavelController, :create
+    post "/login", SessionController, :login
+    get "/logout", SessionController, :logout
+  end
+
+  scope "/api", BatchEcommerceWeb do
+    pipe_through [:api, :auth]
+
+    resources "/responsaveis", ResponsavelController, except: [:create, :new, :edit]
+  end
 
   # Enable LiveDashboard and Swoosh mailbox preview in development
   if Application.compile_env(:batch_ecommerce, :dev_routes) do

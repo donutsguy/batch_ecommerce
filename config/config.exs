@@ -7,6 +7,10 @@
 # General application configuration
 import Config
 
+config :batch_ecommerce, BatchEcommerce.Contas.Guardian,
+  issuer: "BatchEcommerce",
+  secret_key: "3n32yasAvd1GJ6kpB8u8XYRSmz79kjSEkHRFsNNMsaSgObBDu/gY6OpJ9xvlV/9L"
+
 config :batch_ecommerce,
   ecto_repos: [BatchEcommerce.Repo],
   generators: [timestamp_type: :utc_datetime]
