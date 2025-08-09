@@ -5,9 +5,7 @@ defmodule BatchEcommerce.Catalog do
   import Ecto.Query, warn: false
   alias BatchEcommerce.Repo
 
-  alias BatchEcommerce.Catalog.Category
-  alias BatchEcommerce.Catalog.Product
-  alias BatchEcommerce.Catalog.ProductReview
+  alias BatchEcommerce.Catalog.{Category, Product, ProductReview, Minio}
 
   @doc """
   Returns the list of categories.
@@ -122,7 +120,7 @@ defmodule BatchEcommerce.Catalog do
   end
 
   def list_products_by_all_category_ids(category_ids) do
-    category_ids = 
+    category_ids =
       category_ids
       |> Enum.map(fn id ->
         if is_binary(id), do: String.to_integer(id), else: id
@@ -139,40 +137,43 @@ defmodule BatchEcommerce.Catalog do
     Repo.all(query)
   end
 
-  def list_products_paginated(params) do
-    # Aplica filtro de pesquisa se houver termo
-    base_query = 
-      if params[:search_query] && params.search_query != "" do
-        search_term = "%#{params.search_query}%"
-        from p in Product, where: ilike(p.name, ^search_term)
-      else
-        from p in Product
-      end
+def list_products_paginated(params) do
+  # Começa com a query base filtrando apenas produtos ativos
+  base_query = from p in Product, where: p.active == true
 
-    # Aplica filtro de categorias se houver seleção
-    final_query =
-      if params[:category_ids] && !Enum.empty?(params.category_ids) do
-        # Use subquery to avoid issues with group_by in pagination
-        subquery = 
-          from p in base_query,
-            join: pc in "products_categories", on: pc.product_id == p.id,
-            where: pc.category_id in ^params.category_ids,
-            group_by: p.id,
-            having: count(pc.category_id) == ^length(params.category_ids),
-            select: p.id
+  # Aplica filtro de pesquisa se houver termo
+  base_query =
+    if params[:search_query] && params.search_query != "" do
+      search_term = "%#{params.search_query}%"
+      from p in base_query, where: (ilike(p.name, ^search_term))
+    else
+      base_query
+    end
 
-        from p in Product,
-          where: p.id in subquery(subquery),
-          order_by: [desc: p.inserted_at]
-      else
+  # Aplica filtro de categorias se houver seleção
+  final_query =
+    if params[:category_ids] && !Enum.empty?(params.category_ids) do
+      subquery =
         from p in base_query,
-          order_by: [desc: p.inserted_at]
-      end
+          join: pc in "products_categories", on: pc.product_id == p.id,
+          where: pc.category_id in ^params.category_ids,
+          group_by: p.id,
+          having: count(pc.category_id) == ^length(params.category_ids),
+          select: p.id
 
-    # Paginação
-    final_query
-    |> Repo.paginate(page: params.page, page_size: params.per_page)
-  end
+      from p in Product,
+        where: p.id in subquery(subquery) ,
+        order_by: [desc: p.inserted_at]
+    else
+      from p in base_query,
+        order_by: [desc: p.inserted_at]
+    end
+
+  # Paginação
+  final_query
+  |> Repo.paginate(page: params.page, page_size: params.per_page)
+end
+
 
   def list_company_products_paginated(company_id, search_term \\ "", page \\ 1, per_page \\ 6) do
     Product
@@ -210,6 +211,39 @@ defmodule BatchEcommerce.Catalog do
     |> Repo.preload(:categories)
   end
 
+  def get_top_selling_products(company_id, limit \\ 5) do
+    Product
+    |> where([p], p.company_id == ^company_id)
+    |> order_by([p], desc: p.sales_quantity)
+    |> limit(^limit)
+    |> Repo.all()
+  end
+
+  def return_stock(return_quantity, product_id) when return_quantity > 0 do
+    product = get_product(product_id)
+
+    IO.inspect(product.stock_quantity)
+
+    new_stock = product.stock_quantity + return_quantity
+
+    update_product(product, %{stock_quantity: new_stock})
+  end
+
+  def remove_stock(add_quantity, product_id) when add_quantity > 0 do
+    product = get_product(product_id)
+
+    new_stock = product.stock_quantity - add_quantity
+
+    new_sales_quantity = product.sales_quantity + add_quantity
+
+    IO.inspect(00000000000000000000000000000000000000000000000000000000000)
+    IO.inspect(new_stock)
+    IO.inspect(00000000000000000000000000000000000000000000000000000000000)
+
+    update_product = update_product(product, %{stock_quantity: new_stock, sales_quantity: new_sales_quantity})
+    IO.inspect(update_product)
+  end
+
   @doc """
   Creates a product.
 
@@ -222,17 +256,25 @@ defmodule BatchEcommerce.Catalog do
       {:error, %Ecto.Changeset{}}
 
   """
-  def create_product(attrs \\ %{}) do
-    %Product{}
-    |> Product.changeset(attrs)
-    |> Repo.insert()
-    |> case do
-      {:ok, product} ->
-        {:ok, Repo.preload(product, :categories)}
+  def create_product(attrs \\ %{}, filename) do
+    product_with_filename = Map.put(attrs, "filename", filename)
 
-      {:error, changeset} ->
-        {:error, changeset}
+    inserted_product =
+      %Product{}
+      |> Product.changeset(product_with_filename)
+      |> Repo.insert()
+
+      with {:ok, product} <- inserted_product,
+           {:ok, product_preloaded} <- {:ok, Repo.preload(product, :categories)} do
+        {:ok, product_preloaded}
+      else
+        {:error, changeset} ->
+          {:error, changeset}
     end
+  end
+
+  def upload_image(socket, company_name) do
+    Minio.upload_images(socket, company_name, :image, :catalog)
   end
 
   @doc """
@@ -304,12 +346,12 @@ defmodule BatchEcommerce.Catalog do
     Repo.all(from c in Category, where: c.id in ^category_ids)
   end
 
-  def put_image_url(product_id, image_url) do
+  def put_image_filename(product_id, image_filename) do
     case Repo.get(Product, product_id) do
       %Product{} = product ->
         product_with_image =
           product
-          |> Product.image_url_changeset(%{image_url: image_url})
+          |> Product.image_filename_changeset(%{filename: image_filename})
           |> Repo.update()
 
         product_with_image
@@ -319,14 +361,31 @@ defmodule BatchEcommerce.Catalog do
     end
   end
 
+  def create_review(attrs) do
+    %ProductReview{}
+    |> ProductReview.changeset(attrs)
+    |> Repo.insert()
+  end
+
+
+  def update_review(%ProductReview{} = review, attrs) do
+    review
+    |> ProductReview.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def get_review_by_user_and_product(user_id, product_id) do
+    Repo.get_by(ProductReview, user_id: user_id, product_id: product_id)
+  end
+
   def get_product_rating(product_id) do
     query = from r in ProductReview,
             where: r.product_id == ^product_id,
             select: avg(r.review)
-    
+
     case Repo.one(query) do
       nil -> 0.0  # Nenhuma avaliação encontrada
-      average -> 
+      average ->
         average
         |> Decimal.to_float()
         |> Float.round(1)  # Arredonda para 1 casa decimal

@@ -1,39 +1,107 @@
 defmodule BatchEcommerce.Catalog.Minio do
-  @behaviour BatchEcommerce.Catalog.MinioBehaviour
+  alias BatchEcommerce.Accounts
+  #@behaviour BatchEcommerce.Catalog.MinioBehaviour
 
-  @spec upload_image(Plug.Upload.t(), String.t()) :: {:ok, String.t()} | {:error, term()}
-  def upload_image(
-        %Plug.Upload{content_type: content_type, filename: filename} = upload,
-        bucket
-      ) do
+  def upload_images(socket, bucket, upload_name \\ :image, type)
 
-    new_filename = "#{UUID.uuid4()}-#{filename}"
+  def upload_images(socket, bucket, upload_name, :catalog) do
+    uploaded_files =
+      Phoenix.LiveView.consume_uploaded_entries(socket, upload_name, fn %{path: path}, entry ->
+        new_filename = "#{UUID.uuid4()}-#{entry.client_name}"
 
-    request =
-      ExAws.S3.put_object(bucket, new_filename, upload.path, [
-      {:content_type, content_type},
-      {:acl, :public_read}
-    ])
-    |> ExAws.request()
+        case ExAws.S3.put_object(bucket, new_filename, File.read!(path), [
+          {:content_type, entry.client_type},
+          {:acl, :public_read}
+        ]) |> ExAws.request() do
+          {:ok, _msg} -> {:ok, new_filename}
+          {:error, reason} -> {:error, reason}
+        end
+      end)
 
-    case request do
-      {:ok, _response} -> {:ok, new_filename}
-      {:error, reason} -> {:error, reason}
+    filename_with_host = build_preview_url(bucket, uploaded_files)
+    errors = Enum.filter(uploaded_files, &match?({:error, _}, &1))
+
+    case errors do
+      [] ->
+        {:ok, filename_with_host}
+      _ ->
+        {:error, "Upload failed: #{inspect(errors)}"}
     end
   end
 
+  def upload_images(socket, user_name, upload_name, :user) do
+    uploaded_files =
+      Phoenix.LiveView.consume_uploaded_entries(socket, upload_name, fn %{path: path}, entry ->
+        new_filename = "#{UUID.uuid4()}-#{user_name}"
+
+        case ExAws.S3.put_object("users", new_filename, File.read!(path), [
+          {:content_type, entry.client_type},
+          {:acl, :public_read}
+        ]) |> ExAws.request() do
+          {:ok, _msg} -> {:ok, new_filename}
+          {:error, reason} -> {:error, reason}
+        end
+      end)
+
+    filename_with_host = build_preview_url("users", uploaded_files)
+    errors = Enum.filter(uploaded_files, &match?({:error, _}, &1))
+
+    case errors do
+      [] ->
+        {:ok, filename_with_host}
+      _ ->
+        {:error, "Upload failed: #{inspect(errors)}"}
+    end
+  end
+
+  def upload_images(socket, user_name, upload_name, :company) do
+    uploaded_files =
+      Phoenix.LiveView.consume_uploaded_entries(socket, upload_name, fn %{path: path}, entry ->
+        new_filename = "#{UUID.uuid4()}-#{user_name}"
+
+        case ExAws.S3.put_object("companies", new_filename, File.read!(path), [
+          {:content_type, entry.client_type},
+          {:acl, :public_read}
+        ]) |> ExAws.request() do
+          {:ok, _msg} -> {:ok, new_filename}
+          {:error, reason} -> {:error, reason}
+        end
+      end)
+
+    filename_with_host = build_preview_url("companies", uploaded_files)
+    errors = Enum.filter(uploaded_files, &match?({:error, _}, &1))
+
+    case errors do
+      [] ->
+        {:ok, filename_with_host}
+      _ ->
+        {:error, "Upload failed: #{inspect(errors)}"}
+    end
+  end
+
+  defp build_preview_url(bucket, filename) do
+    base_url = get_base_url()
+    "#{base_url}/api/v1/buckets/#{bucket}/objects/download?preview=true&prefix=#{filename}&version_id=null"
+  end
+
+  defp get_base_url() do
+    "http://localhost:9001"
+  end
+
   def create_public_bucket(bucket_name) do
+    parsed_bucket_name = Accounts.normalize_bucket_name(bucket_name)
+
     create_request =
-      ExAws.S3.put_bucket(bucket_name, "us-east-1")
+      ExAws.S3.put_bucket(parsed_bucket_name, "us-east-1")
        |> ExAws.request()
 
     case create_request do
       {:ok, _response} ->
-        apply_public_policy(bucket_name)
-        {:ok, "Bucket #{bucket_name} criado e tornado público."}
+        apply_public_policy(parsed_bucket_name)
+        {:ok, "Bucket #{parsed_bucket_name} criado e tornado público."}
 
       {:error, {:http_error, 409, _}} ->
-        {:ok, "Bucket #{bucket_name} já existe."}
+        {:error, "Bucket #{parsed_bucket_name} já existe."}
 
       {:error, reason} ->
         {:error, reason}

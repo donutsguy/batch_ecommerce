@@ -7,8 +7,9 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.ProductIndex do
 
   @impl true
   def mount(%{"company_id" => company_id}, session, socket) do
-    user_id = Map.get(session, "current_user")
-    {:ok, 
+    IO.inspect(socket)
+    user_id = Map.get(session, "user_id")
+    {:ok,
      socket
      |> assign(:company_id, company_id)
      |> assign(:products, [])
@@ -75,8 +76,17 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.ProductIndex do
   @impl true
   def render(assigns) do
     ~H"""
-    <.live_component module={BatchEcommerceWeb.Live.HeaderLive.HeaderDefault} user={@user} id="HeaderDefault"/>
+    <.live_component module={BatchEcommerceWeb.Live.HeaderLive.HeaderDefault} user={@user} company={@current_company} id="HeaderDefault"/>
     <div class="max-w-7xl mx-auto px-4 py-20">
+    <!-- Botão Voltar -->
+      <div class="mb-4">
+        <.link navigate={~p"/companies"} class="inline-flex items-center text-gray-400 hover:text-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+          </svg>
+          Voltar
+        </.link>
+      </div>
       <!-- Barra de pesquisa e botões -->
       <div class="flex justify-between items-center bg-white mt-[20px] mb-[2px] px-[15px] py-[5px] rounded-t-lg">
       <.simple_form
@@ -100,12 +110,12 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.ProductIndex do
       </.simple_form>
 
         <div class="flex space-x-8">
-          <a href={~p"/api/orders/export-stream"}
-            class="btn btn-primary font-bold text-green-600 border border-[2px] border-green-600 rounded-lg p-1 hover:bg-green-600 hover:text-white hover:scale-105"
+          <a href={~p"/orders/export-stream"}
+            class="btn btn-primary font-bold text-green-600 hover:scale-105 transition duration-200"
             download>
             Exportar relatório
           </a>
-          <.link patch={~p"/products/new"} color="primary" class="font-bold text-white bg-indigo-600 rounded-lg p-1 hover:bg-indigo-800 hover:scale-105">
+          <.link patch={~p"/products/new"} class="font-bold text-indigo-600 hover:scale-105 transition duration-200">
             Adicionar Produto
           </.link>
         </div>
@@ -133,6 +143,9 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.ProductIndex do
         </:col>
         <:col :let={product} label="Preço">
           <%= product.price %>
+        </:col>
+        <:col :let={product} label="Estoque">
+          <%= product.stock_quantity || 0 %>  <!-- Use || 0 para tratar valores nil -->
         </:col>
         <:col :let={product} label="Ações">
           <.link
@@ -206,7 +219,7 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.ProductIndex do
             <%= for i <- max(1, @page - 2)..min(@total_pages, @page + 2) do %>
               <a
                 href="#"
-                class={"relative inline-flex items-center px-4 py-2 text-sm text-white font-semibold #{if i == @page, do: "bg-indigo-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600", else: "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"}"}
+                class={"relative inline-flex items-center px-4 py-2 text-sm text-white font-semibold #{if i == @page, do: "bg-indigo-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600", else: "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hover:text-indigo-600 focus:outline-offset-0"}"}
                 phx-click="nav"
                 phx-value-page={i}
               >

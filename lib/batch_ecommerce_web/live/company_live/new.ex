@@ -6,7 +6,7 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.New do
 
   def mount(_params, session, socket) do
     # Pega o current_user da sessão
-    user_id = Map.get(session, "current_user")
+    user_id = Map.get(session, "user_id")
     current_user = Accounts.get_user(user_id)
 
     {:ok,
@@ -31,7 +31,7 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.New do
           patch={~p"/companies"}
         />
 
-        <.back navigate={~p"/companies"} class="mt-6 inline-block text-blue-600 hover:text-blue-800">
+        <.back navigate={~p"/companies"}>
           ← Voltar para empresas
         </.back>
       </div>

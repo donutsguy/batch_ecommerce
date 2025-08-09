@@ -1,16 +1,15 @@
 defmodule BatchEcommerceWeb.Live.ProductLive.Index do
   use BatchEcommerceWeb, :live_view
   alias BatchEcommerce.Catalog
-  alias BatchEcommerceWeb.Live.ProductLive.FormComponent
-  import BatchEcommerceWeb.CoreComponents
   alias BatchEcommerce.Accounts
+  import BatchEcommerceWeb.CoreComponents
 
   @impl true
   def mount(_params, session, socket) do
-    user_id = Map.get(session, "current_user")
-    IO.inspect(user_id)
+    user_id = Map.get(session, "user_id")
+    IO.inspect(session)
     current_user = Accounts.get_user(user_id)
-    {:ok, 
+    {:ok,
       socket
       |> assign_defaults(current_user)
       |> load_products()
@@ -18,13 +17,13 @@ defmodule BatchEcommerceWeb.Live.ProductLive.Index do
   end
 
   defp assign_defaults(socket, current_user) do
-    assign(socket, 
+    assign(socket,
       categories: Catalog.list_categories(),
       selected_categories: [],
-      search_query: "", 
+      search_query: "",
       no_products_message: nil,
       page: 1,
-      per_page: 10,
+      per_page: 9,
       products: [],
       meta: nil,
       current_user: current_user
@@ -33,8 +32,8 @@ defmodule BatchEcommerceWeb.Live.ProductLive.Index do
 
   defp load_products(socket) do
     %{
-      page: page, 
-      per_page: per_page, 
+      page: page,
+      per_page: per_page,
       selected_categories: selected_categories,
       search_query: search_query
     } = socket.assigns
@@ -74,14 +73,14 @@ defmodule BatchEcommerceWeb.Live.ProductLive.Index do
   def handle_event("toggle_category", %{"category" => category_id}, socket) do
     category_id = String.to_integer(category_id)
 
-    selected_categories = 
+    selected_categories =
       if category_id in socket.assigns.selected_categories do
         Enum.reject(socket.assigns.selected_categories, &(&1 == category_id))
       else
         [category_id | socket.assigns.selected_categories]
       end
 
-    {:noreply, 
+    {:noreply,
       socket
       |> assign(selected_categories: selected_categories, page: 1)
       |> load_products()
@@ -95,7 +94,7 @@ defmodule BatchEcommerceWeb.Live.ProductLive.Index do
 
   @impl true
   def handle_event("paginate", %{"page" => page}, socket) do
-    {:noreply, 
+    {:noreply,
       socket
       |> assign(page: String.to_integer(page))
       |> load_products()
@@ -104,7 +103,7 @@ defmodule BatchEcommerceWeb.Live.ProductLive.Index do
 
   @impl true
   def handle_event("search", %{"query" => query}, socket) do
-    {:noreply, 
+    {:noreply,
       socket
       |> assign(search_query: query, page: 1)
       |> load_products()
@@ -114,18 +113,18 @@ defmodule BatchEcommerceWeb.Live.ProductLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <.live_component 
-      module={BatchEcommerceWeb.Live.HeaderLive.HeaderFull} 
+    <.live_component
+      module={BatchEcommerceWeb.Live.HeaderLive.HeaderFull}
       id="header-full"
+      search_query={@search_query}
       user={@current_user}
-      search_query={@search_query}  # Passa o estado atual da pesquisa
     />
     <div class="container mx-auto px-4 py-8">
       <div class="flex flex-col md:flex-row gap-8">
         <!-- Filtros de categoria (agora sticky) -->
-        <.categories_sidebar 
-          categories={@categories} 
-          selected_categories={@selected_categories} 
+        <.categories_sidebar
+          categories={@categories}
+          selected_categories={@selected_categories}
         />
 
         <!-- Lista de produtos -->
@@ -161,7 +160,7 @@ defmodule BatchEcommerceWeb.Live.ProductLive.Index do
                   <button
                     phx-click="paginate"
                     phx-value-page={page}
-                    class={"px-4 py-2 border #{if page == @meta.page_number, do: "bg-indigo-600 text-white", else: "bg-white text-gray-700 hover:bg-gray-50"}"}
+                    class={"px-4 py-2 border #{if page == @meta.page_number, do: "bg-indigo-600 text-white", else: "bg-white text-indigo-600 hover:bg-gray-100"}"}
                   >
                     <%= page %>
                   </button>

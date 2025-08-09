@@ -8,6 +8,7 @@ defmodule BatchEcommerce.Accounts do
   alias BatchEcommerce.Repo
 
   alias BatchEcommerce.Accounts.User
+  alias BatchEcommerce.Catalog.Minio
 
   @doc """
   Returns the list of users.
@@ -34,7 +35,9 @@ defmodule BatchEcommerce.Accounts do
       ** (Ecto.NoResultsError)
 
   """
+  def get_user(nil), do: nil
   def get_user(id), do: Repo.get(User, id) |> Repo.preload([:addresses])
+
 
   @doc """
   Creates a user.
@@ -57,6 +60,7 @@ defmodule BatchEcommerce.Accounts do
         {:ok, Repo.preload(user, :addresses)}
 
       {:error, changeset} ->
+        IO.inspect(changeset)
         {:error, changeset}
     end
   end
@@ -107,6 +111,10 @@ defmodule BatchEcommerce.Accounts do
     Repo.delete(user)
   end
 
+  def form_change_user(%User{} = user, attrs \\ %{}) do
+    User.form_changeset(user, attrs)
+  end
+
   def insert_change_user(%User{} = user, attrs \\ %{}) do
     User.insert_changeset(user, attrs)
   end
@@ -141,7 +149,6 @@ defmodule BatchEcommerce.Accounts do
     Repo.preload(user, :company)
   end
 
-
   alias BatchEcommerce.Accounts.Company
 
   @doc """
@@ -154,34 +161,14 @@ defmodule BatchEcommerce.Accounts do
 
   """
 
-
-  def list_companies do
-    Repo.all(Company) |> companies_preload()
-  end
-
-  def companies_preload(companies) do
+  def companies_preload_address(companies) do
     companies
-    |> Repo.preload(:addresses) |> Repo.preload(products: [:categories])
+    |> Repo.preload(:addresses)
   end
 
-  @doc """
-  Gets a single company.
-
-  Raises `Ecto.NoResultsError` if the Company does not exist.
-
-  ## Examples
-
-      iex> get_company!(123)
-      %Company{}
-
-      iex> get_company!(456)
-      ** (Ecto.NoResultsError)
-
-  """
   def get_company_by_user_id(user_id), do: Repo.get_by(Company, user_id: user_id)
-    |> companies_preload()
 
-  def get_company!(id), do: Repo.get(Company, id) |> companies_preload()
+  def get_company!(id), do: Repo.get(Company, id) |> companies_preload_address()
 
   @doc """
   Creates a company.
@@ -196,17 +183,69 @@ defmodule BatchEcommerce.Accounts do
 
   """
   def create_company(attrs \\ %{}) do
-    %Company{}
-    |> Company.changeset(attrs)
-    |> Repo.insert()
-    |> case do
-      {:ok, company} ->
-        IO.inspect(company, label: "company: ")
-        {:ok, companies_preload(company)}
+    minio_bucket_name = normalize_bucket_name(attrs["name"])
+    attrs = Map.put(attrs, "minio_bucket_name", minio_bucket_name)
 
+    changeset =
+      %Company{}
+      |> Company.changeset(attrs)
+
+    with {:ok, company} <- Repo.insert(changeset),
+         {:ok, _msg} <- Minio.create_public_bucket(company.name) do
+        {:ok, companies_preload_address(company)}
+    else
       {:error, changeset} ->
         {:error, changeset}
     end
+  end
+
+  @min_length 3
+  @max_length 63
+
+  def normalize_bucket_name(name) do
+    name
+    |> String.downcase()
+    |> remove_accents()
+    |> String.replace(~r/[\s_]+/, "-")
+    |> String.replace(~r/[^a-z0-9.-]/, "")
+    |> String.trim_leading(".")
+    |> String.trim_trailing(".")
+    |> truncate_to_max()
+    |> ensure_min_length()
+  end
+
+  defp remove_accents(string) do
+    string
+    |> :unicode.characters_to_nfd_binary()
+    |> String.replace(~r/[\p{Mn}]/u, "")
+  end
+
+  defp truncate_to_max(string) when byte_size(string) > @max_length do
+    String.slice(string, 0, @max_length)
+  end
+
+  defp truncate_to_max(string), do: string
+
+  defp ensure_min_length(string) when byte_size(string) < @min_length do
+    string <> "-bucket"
+  end
+
+  defp ensure_min_length(string), do: string
+
+  def upload_image(socket, company_name, :user) do
+    Minio.upload_images(socket, company_name, :image, :user)
+  end
+
+  def upload_image(socket, company_name, :company) do
+    Minio.upload_images(socket, company_name, :image, :company)
+  end
+
+  def normalize_filename(name) do
+    name
+    |> String.downcase()
+    |> String.normalize(:nfd)
+    |> String.replace(~r/[̀-ͯ]/, "")
+    |> String.replace(~r/[^a-z0-9\._-]/, "_")
   end
 
   def company_exists_with_field?(field, value) do
@@ -232,7 +271,7 @@ defmodule BatchEcommerce.Accounts do
     |> Repo.update()
     |> case do
       {:ok, company_updated} ->
-        {:ok, companies_preload(company_updated)}
+        {:ok, companies_preload_address(company_updated)}
 
       {:error, changeset} ->
         {:error, changeset}
@@ -271,16 +310,6 @@ defmodule BatchEcommerce.Accounts do
   alias BatchEcommerce.Accounts.Address
 
   @doc """
-  Returns the list of addresses.
-  ## Examples
-      iex> list_addresses()
-      [%Address{}, ...]
-  """
-  def list_addresses do
-    Repo.all(Address)
-  end
-
-  @doc """
   Gets a single address.
   Raises `Ecto.NoResultsError` if the Address does not exist.
   ## Examples
@@ -291,33 +320,7 @@ defmodule BatchEcommerce.Accounts do
   """
   def get_address(id), do: Repo.get(Address, id)
 
-  @doc """
-  Creates a address.
-  ## Examples
-      iex> create_address(%{field: value})
-      {:ok, %Address{}}
-      iex> create_address(%{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-  """
-  def create_address(attrs \\ %{}) do
-    %Address{}
-    |> Address.changeset(attrs)
-    |> Repo.insert()
-  end
 
-  @doc """
-  Updates a address.
-  ## Examples
-      iex> update_address(address, %{field: new_value})
-      {:ok, %Address{}}
-      iex> update_address(address, %{field: bad_value})
-      {:error, %Ecto.Changeset{}}
-  """
-  def update_address(%Address{} = address, attrs) do
-    address
-    |> Address.changeset(attrs)
-    |> Repo.update()
-  end
 
   @doc """
   Deletes a address.
@@ -339,5 +342,168 @@ defmodule BatchEcommerce.Accounts do
   """
   def change_address(%Address{} = address, attrs \\ %{}) do
     Address.changeset(address, attrs)
+  end
+
+  alias BatchEcommerce.Accounts.Notification
+
+  @doc """
+  Returns the list of notifications.
+
+  ## Examples
+
+      iex> list_notifications()
+      [%Notification{}, ...]
+
+  """
+  def list_notifications do
+    Repo.all(Notification)
+  end
+
+  @doc """
+  Gets a single notification.
+
+  Raises `Ecto.NoResultsError` if the Notification does not exist.
+
+  ## Examples
+
+      iex> get_notification!(123)
+      %Notification{}
+
+      iex> get_notification!(456)
+      ** (Ecto.NoResultsError)
+
+  """
+  def get_notification!(id), do: Repo.get!(Notification, id)
+
+  @doc """
+  Creates a notification.
+
+  ## Examples
+
+      iex> create_notification(%{field: value})
+      {:ok, %Notification{}}
+
+      iex> create_notification(%{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def create_notification(attrs \\ %{}) do
+    %Notification{}
+    |> Notification.changeset(attrs)
+    |> Repo.insert()
+  end
+
+  # Função para listar notificações não lidas por user_id (UUID)
+  def list_unread_notifications(user_id) when is_binary(user_id) do
+    user_notifs =
+      from(n in Notification,
+        where: n.viewed == false and n.recipient_user_id == ^user_id,
+        order_by: [desc: n.inserted_at],
+        limit: 10
+      )
+      |> Repo.all()
+
+    %{
+      user_notifications: user_notifs || []
+    }
+  end
+
+  def list_unread_notifications(company_id) when is_integer(company_id) do
+    query = from n in Notification,
+      where: n.viewed == false and n.recipient_company_id == ^company_id,
+      order_by: [desc: n.inserted_at],
+      limit: 10
+
+    Repo.all(query)
+  end
+
+
+
+  def mark_as_viewed(notification_ids) when is_list(notification_ids) do
+    from(n in Notification, where: n.id in ^notification_ids)
+    |> Repo.update_all(set: [viewed: true])
+  end
+
+  @doc """
+  Updates a notification.
+
+  ## Examples
+
+      iex> update_notification(notification, %{field: new_value})
+      {:ok, %Notification{}}
+
+      iex> update_notification(notification, %{field: bad_value})
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def update_notification(%Notification{} = notification, attrs) do
+    notification
+    |> Notification.changeset(attrs)
+    |> Repo.update()
+  end
+
+  def mark_all_as_read(user_id) when is_binary(user_id) do
+    query =
+      from n in Notification,
+      where: n.viewed == false and
+            (n.recipient_user_id == ^user_id)
+
+    Repo.update_all(query, set: [viewed: true])
+  end
+
+  def mark_all_as_read(company_id) when is_integer(company_id) do
+    query =
+      from n in Notification,
+      where: n.viewed == false and
+            (n.recipient_company_id == ^company_id)
+
+    Repo.update_all(query, set: [viewed: true])
+  end
+
+  def count_unread_notifications(user_id) when is_binary(user_id) do
+    query =
+      from n in Notification,
+      where: n.viewed == false and
+             (n.recipient_user_id == ^user_id)
+
+    Repo.aggregate(query, :count)
+  end
+
+  def count_unread_notifications(company_id) when is_integer(company_id) do
+    query =
+      from n in Notification,
+      where: n.viewed == false and
+             (n.recipient_company_id == ^company_id)
+
+    Repo.aggregate(query, :count)
+  end
+
+  @doc """
+  Deletes a notification.
+
+  ## Examples
+
+      iex> delete_notification(notification)
+      {:ok, %Notification{}}
+
+      iex> delete_notification(notification)
+      {:error, %Ecto.Changeset{}}
+
+  """
+  def delete_notification(%Notification{} = notification) do
+    Repo.delete(notification)
+  end
+
+  @doc """
+  Returns an `%Ecto.Changeset{}` for tracking notification changes.
+
+  ## Examples
+
+      iex> change_notification(notification)
+      %Ecto.Changeset{data: %Notification{}}
+
+  """
+  def change_notification(%Notification{} = notification, attrs \\ %{}) do
+    Notification.changeset(notification, attrs)
   end
 end

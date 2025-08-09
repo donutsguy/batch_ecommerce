@@ -1,19 +1,20 @@
 defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
   use BatchEcommerceWeb, :live_view
+
   alias BatchEcommerce.ShoppingCart
   alias BatchEcommerce.Orders
   alias BatchEcommerce.Accounts
 
   def mount(_params, session, socket) do
-    current_user = Map.get(session, "current_user")
+    current_user = session["user_id"]
 
-    # Busca os produtos do carrinho e precarrega as associações necessárias
     current_user = Accounts.get_user(current_user)
-    cart_products = 
-      current_user.id
+
+    cart_products =
+      session["user_id"]
       |> ShoppingCart.get_cart_user()
-    
-    socket = 
+
+    socket =
       socket
       |> assign(:show_payment_modal, false)
       |> assign(:selected_payment_method, nil)
@@ -37,8 +38,8 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
           {:noreply,
           socket
           |> put_flash(:info, "Compra realizada com sucesso")
-          |> push_redirect(to: ~p"/orders")}
-          
+          |> push_navigate(to: ~p"/orders")}
+
         {:error, _reason} ->
           {:noreply, put_flash(socket, :error, "Erro ao processar pedido")}
       end
@@ -67,12 +68,12 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
 
   def handle_event("update_quantity", %{"cart_product_id" => id, "quantity" => qty}, socket) do
     cart_product = ShoppingCart.get_cart_product(String.to_integer(id))
-    
+
     case ShoppingCart.update_cart_product(cart_product, %{"quantity" => qty}) do
       {:ok, updated} ->
         cart_products = Enum.map(socket.assigns.cart_products, &(&1.id == updated.id && updated || &1))
         {:noreply, assign(socket, :cart_products, cart_products)}
-      
+
       _ ->
         {:noreply, put_flash(socket, :error, "Erro na atualização")}
     end
@@ -93,11 +94,11 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
     case Accounts.delete_address(address) do
       {:ok, _} ->
         updated_user = Accounts.get_user(socket.assigns.current_user.id)
-        {:noreply, 
+        {:noreply,
         socket
         |> assign(:current_user, updated_user)
         |> put_flash(:info, "Endereço removido com sucesso")}
-        
+
       {:error, _} ->
         {:noreply, put_flash(socket, :error, "Erro ao remover endereço")}
     end
@@ -106,7 +107,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
   def handle_event("confirm_address", _, socket) do
     if socket.assigns.selected_address_id do
       shipping_cost = Decimal.new(:rand.uniform(40) + 10)
-      {:noreply, 
+      {:noreply,
       socket
       |> assign(:show_address_modal, false)
       |> assign(:shipping_cost, shipping_cost)
@@ -142,8 +143,8 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
       <div class="w-full max-w-md transform rounded-lg bg-white p-6 shadow-xl">
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-lg font-medium text-gray-900">Selecione a forma de pagamento</h3>
-          <button 
-            phx-click="toggle_payment_modal" 
+          <button
+            phx-click="toggle_payment_modal"
             class="text-gray-400 hover:text-gray-500"
           >
             <.icon name="hero-x-mark" class="h-6 w-6" />
@@ -153,10 +154,10 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
         <div class="space-y-4">
           <!-- Opção PIX -->
           <div class="flex items-start">
-            <input 
-              type="radio" 
+            <input
+              type="radio"
               id="payment-pix"
-              name="payment_method" 
+              name="payment_method"
               value="PIX"
               checked={@selected_payment_method == "PIX"}
               class="mt-1 h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
@@ -176,10 +177,10 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
 
           <!-- Opção Cartão de Crédito -->
           <div class="flex items-start">
-            <input 
-              type="radio" 
+            <input
+              type="radio"
               id="payment-credit"
-              name="payment_method" 
+              name="payment_method"
               value="Cartão de Crédito"
               checked={@selected_payment_method == "Cartão de Crédito"}
               class="mt-1 h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
@@ -199,10 +200,10 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
 
           <!-- Opção Cartão de Débito -->
           <div class="flex items-start">
-            <input 
-              type="radio" 
+            <input
+              type="radio"
               id="payment-debit"
-              name="payment_method" 
+              name="payment_method"
               value="Cartão de Débito"
               checked={@selected_payment_method == "Cartão de Débito"}
               class="mt-1 h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
@@ -222,7 +223,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
         </div>
 
         <div class="mt-6">
-          <.button 
+          <.button
             phx-click="proceed_to_checkout"
             disabled={is_nil(@selected_payment_method)}
             class="w-full justify-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-500 disabled:bg-gray-400"
@@ -243,8 +244,8 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
 
       <!-- Modal de endereços -->
       <%= if @show_address_modal do %>
-        <.address_modal 
-          current_user={@current_user} 
+        <.address_modal
+          current_user={@current_user}
           selected_address_id={@selected_address_id}
         />
       <% end %>
@@ -254,13 +255,13 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
         <.payment_modal selected_payment_method={@selected_payment_method} />
       <% end %>
 
-      <div class="grid grid-cols-1 gap-8 lg:grid-cols-3">
+      <div class="grid grid-cols-1 gap-8">
         <!-- Lista de itens do carrinho (2/3 da tela) -->
         <div class="lg:col-span-2">
           <%= if Enum.empty?(@cart_products) do %>
             <.empty_cart_state />
           <% else %>
-            <div class="space-y-6">
+            <div class="space-y-6 lg:grid-cols-3">
               <%= for cart_product <- @cart_products do %>
                 <.cart_item cart_product={cart_product} />
               <% end %>
@@ -292,7 +293,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
       <div class="mt-6">
         <.link
           navigate={~p"/products"}
-          class="inline-flex items-center rounded-md bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+          class="inline-flex items-center rounded-md bg-indigo-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-indigo-800 hover:scale-105 transition duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
         >
           <.icon name="hero-shopping-bag" class="-ml-0.5 mr-1.5 h-5 w-5" />
           Continuar Comprando
@@ -310,7 +311,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
         <!-- Imagem do produto -->
         <div class="h-24 w-24 flex-shrink-0 overflow-hidden rounded-lg border border-gray-200">
           <img
-            src={@cart_product.product.image_url}
+            src={@cart_product.product.filename}
             alt={@cart_product.product.name}
             class="h-full w-full object-cover object-center"
           />
@@ -339,9 +340,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
                   phx-value-cart_product_id={@cart_product.id}
                   phx-value-quantity={@cart_product.quantity - 1}
                   disabled={@cart_product.quantity <= 1}
-                  class="!rounded-none !rounded-l-md px-3 py-1.5 text-sm"
-                  size="sm"
-                  variant="outline"
+                  class="!rounded-none !rounded-l-md bg-indigo-600 hover:bg-indigo-800 px-3 py-1.5 text-sm"
                 >
                   <.icon name="hero-minus" class="h-4 w-4" />
                 </.button>
@@ -354,9 +353,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
                   phx-click="update_quantity"
                   phx-value-cart_product_id={@cart_product.id}
                   phx-value-quantity={@cart_product.quantity + 1}
-                  class="!rounded-none !rounded-r-md px-3 py-1.5 text-sm"
-                  size="sm"
-                  variant="outline"
+                  class="!rounded-none !rounded-r-md bg-indigo-600 hover:bg-indigo-800 px-3 py-1.5 text-sm"
                   disabled={@cart_product.quantity >= (@cart_product.product.stock_quantity || 0)}
                 >
                   <.icon name="hero-plus" class="h-4 w-4" />
@@ -368,12 +365,12 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
             <!-- Preço unitário -->
             <div class="text-right">
               <%
-                price = @cart_product.price_when_carted
+                price = @cart_product.product.price
                 discount = @cart_product.product.discount || 0
                 discounted_price = calculate_discounted_price(price, discount)
               %>
 
-              <%= if Decimal.cmp(discounted_price, price) == :lt do %>
+              <%= if Decimal.compare(discounted_price, price) == :lt do %>
                 <p class="text-sm text-gray-500 line-through">
                   R$ <%= format_decimal(price) %>
                 </p>
@@ -381,7 +378,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
                   R$ <%= format_decimal(discounted_price) %>
                 </p>
               <% else %>
-                <p class="text-lg font-bold text-gray-900">
+                <p class="text-lg font-bold text-green-600">
                   R$ <%= format_decimal(price) %>
                 </p>
               <% end %>
@@ -395,9 +392,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
               phx-click="remove_item"
               phx-value-cart_product_id={@cart_product.id}
               data-confirm="Tem certeza que deseja remover este item do carrinho?"
-              variant="outline"
-              size="sm"
-              class="text-red-600 border-red-300 hover:bg-red-50"
+              class="text-red-600 bg-red-600  hover:bg-red-800"
             >
               <.icon name="hero-trash" class="mr-1.5 h-4 w-4" />
               Remover
@@ -412,7 +407,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
   # Componente para resumo do pedido
   defp order_summary(assigns) do
     ~H"""
-    <div class="sticky top-4">
+    <div class="sticky top-4 ml-8">
       <div class="rounded-lg bg-gray-50 p-6">
         <h2 class="text-lg font-semibold text-gray-900 mb-6">Resumo do Pedido</h2>
 
@@ -424,7 +419,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
           </div>
 
           <!-- Frete -->
-          <div 
+          <div
             class="flex justify-between text-gray-600 cursor-pointer hover:bg-gray-100 p-2 rounded"
             phx-click="toggle_address_modal"
           >
@@ -449,9 +444,9 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
         </div>
 
     <!-- Botões de ação -->
-        <div class="mt-6 space-y-3">
+        <div class="mt-6 space-y-3 px-10">
           <%= if @shipping_cost == Decimal.new("0") do %>
-            <.button 
+            <.button
               phx-click="toggle_address_modal"
               class="w-full bg-yellow-500 hover:bg-yellow-600"
             >
@@ -459,7 +454,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
               Calcular Frete Primeiro
             </.button>
           <% else %>
-            <.button 
+            <.button
               phx-click="toggle_payment_modal"
               class="w-full bg-green-600 hover:bg-green-700"
             >
@@ -469,10 +464,10 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
           <% end %>
           <.link
             navigate={~p"/products"}
-            class="block w-full text-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            class="block w-full text-center rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-50  shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-indigo-600 hover:bg-indigo-800 focus:ring-offset-2"
           >
             <.icon name="hero-arrow-left" class="mr-1.5 h-4 w-4 inline" />
-            Continuar Comprando
+           + Continuar Comprando
           </.link>
         </div>
       </div>
@@ -487,8 +482,8 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
       <div class="w-full max-w-2xl transform rounded-lg bg-white p-6 shadow-xl">
         <div class="flex justify-between items-center mb-6">
           <h3 class="text-lg font-medium text-gray-900">Selecione um endereço</h3>
-          <button 
-            phx-click="toggle_address_modal" 
+          <button
+            phx-click="toggle_address_modal"
             class="text-gray-400 hover:text-gray-500"
           >
             <.icon name="hero-x-mark" class="h-6 w-6" />
@@ -498,19 +493,19 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
         <div class="space-y-4 max-h-96 overflow-y-auto">
           <%= for address <- @current_user.addresses do %>
             <div class="flex items-start">
-              <input 
-                type="radio" 
+              <input
+                type="radio"
                 id={"address-#{address.id}"}
-                name="selected_address" 
+                name="selected_address"
                 value={address.id}
                 checked={@selected_address_id == address.id}
                 class="mt-1 h-4 w-4 text-indigo-600 border-gray-300 focus:ring-indigo-500"
                 phx-click="select_address"
                 phx-value-address_id={address.id}
               />
-              
-              <label 
-                for={"address-#{address.id}"} 
+
+              <label
+                for={"address-#{address.id}"}
                 class="ml-3 block flex-1"
               >
                 <div class="border rounded-lg p-4 hover:border-indigo-500">
@@ -518,7 +513,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
                     <span class="font-medium">
                       <%= address.district %>, <%= address.city %> - <%= address.uf %>
                     </span>
-                    <button 
+                    <button
                       phx-click="delete_address"
                       phx-value-address_id={address.id}
                       class="text-gray-400 hover:text-red-500"
@@ -540,18 +535,18 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
         </div>
 
         <div class="mt-6 flex justify-between">
-          <.link 
-            navigate={~p"/address/new"} 
-            class="inline-flex items-center rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-500"
+          <.link
+            navigate={~p"/address/new"}
+            class="inline-flex items-center h-[40px] rounded-md bg-white px-4 py-2 text-sm font-medium text-gray-500 shadow-sm hover:scale-105 transition-transform duration-300"
           >
             <.icon name="hero-plus" class="-ml-1 mr-2 h-5 w-5" />
             Adicionar novo endereço
           </.link>
 
-          <.button 
+          <.button
             phx-click="confirm_address"
             disabled={is_nil(@selected_address_id)}
-            class="inline-flex items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-500 disabled:bg-gray-400"
+            class="inline-flex h-[40px] items-center rounded-md bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-none hover:bg-green-800"
           >
             Confirmar Endereço
           </.button>
@@ -570,7 +565,7 @@ defmodule BatchEcommerceWeb.Live.ShoppingCart.Index do
   defp calculate_discounted_price(price, discount) when is_nil(discount) or discount == 0 do
     price
   end
-  
+
   defp calculate_discounted_price(price, discount) do
     discount_decimal = Decimal.new(discount)
     hundred = Decimal.new(100)

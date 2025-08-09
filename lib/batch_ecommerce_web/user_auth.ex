@@ -4,6 +4,7 @@ defmodule BatchEcommerceWeb.UserAuth do
   import Plug.Conn
   import Phoenix.Controller
 
+  alias BatchEcommerce.Accounts
   alias BatchEcommerce.Accounts.Guardian
 
 
@@ -28,13 +29,15 @@ defmodule BatchEcommerceWeb.UserAuth do
   """
   def log_in_user(conn, user, params \\ %{}) do
     {:ok, token, _claims} = Guardian.encode_and_sign(user)
-    user_return_to = get_session(conn, :user_return_to)
+    #user_return_to = get_session(conn, :user_return_to)
+
 
     conn
     |> renew_session()
     |> put_token_in_session(token)
+    |> put_user_id_in_session(user.id)
     |> maybe_write_remember_me_cookie(token, params)
-    |> redirect(to: user_return_to || signed_in_path(conn))
+    |> redirect(to: "/login")
   end
 
   defp maybe_write_remember_me_cookie(conn, token, %{"remember_me" => "true"}) do
@@ -81,7 +84,7 @@ defmodule BatchEcommerceWeb.UserAuth do
     conn
     |> renew_session()
     |> delete_resp_cookie(@remember_me_cookie)
-    |> redirect(to: ~p"/api/users/log_in")
+    |> redirect(to: ~p"/login")
   end
 
   @doc """
@@ -154,8 +157,8 @@ defmodule BatchEcommerceWeb.UserAuth do
     else
       socket =
         socket
-        |> Phoenix.LiveView.put_flash(:error, "You must log in to access this page.")
-        |> Phoenix.LiveView.redirect(to: ~p"/api/users/log_in")
+        |> Phoenix.LiveView.put_flash(:error, "Você precisa fazer login para acessar esta página.")
+        |> Phoenix.LiveView.redirect(to: ~p"/login")
 
       {:halt, socket}
     end
@@ -171,6 +174,29 @@ defmodule BatchEcommerceWeb.UserAuth do
     end
   end
 
+  def on_mount(:require_authenticated_and_has_company, _params, session, socket) do
+    socket = mount_current_user(socket, session)
+
+    if socket.assigns.current_user do
+      case Accounts.get_company_by_user_id(session["user_id"]) do
+        %{} = company ->
+          {:cont, Phoenix.Component.assign(socket, :current_company, company)}
+
+        nil ->
+          IO.inspect(session, label: "Session when company is nil")
+          {:cont,
+          socket
+          |> Phoenix.LiveView.put_flash(:error, "Você precisa cadastrar uma empresa para acessar esta área.")}
+      end
+    else
+      {:halt,
+      socket
+      |> Phoenix.LiveView.put_flash(:error, "Você precisa fazer login para acessar esta página.")
+      |> Phoenix.LiveView.redirect(to: ~p"/login")}
+    end
+  end
+
+  # Corrigir a função mount_current_user para retornar apenas o usuário
   defp mount_current_user(socket, session) do
     Phoenix.Component.assign_new(socket, :current_user, fn ->
       with token when not is_nil(token) <- session["user_token"],
@@ -207,9 +233,9 @@ defmodule BatchEcommerceWeb.UserAuth do
       conn
     else
       conn
-      |> put_flash(:error, "You must log in to access this page.")
+      |> put_flash(:error, "Você precisa fazer login para acessar esta página.")
       |> maybe_store_return_to()
-      |> redirect(to: ~p"/api/users/log_in")
+      |> redirect(to: ~p"/login")
       |> halt()
     end
   end
@@ -220,11 +246,13 @@ defmodule BatchEcommerceWeb.UserAuth do
     |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
   end
 
+  defp put_user_id_in_session(conn, user_id), do: put_session(conn, :user_id, user_id)
+
   defp maybe_store_return_to(%{method: "GET"} = conn) do
     put_session(conn, :user_return_to, current_path(conn))
   end
 
   defp maybe_store_return_to(conn), do: conn
 
-  defp signed_in_path(_conn), do: ~p"/users"
+  defp signed_in_path(_conn), do: ~p"/products"
 end

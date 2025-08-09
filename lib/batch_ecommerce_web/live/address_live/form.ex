@@ -9,7 +9,7 @@ defmodule BatchEcommerceWeb.Live.AddressLive.Form do
 
   @impl true
   def mount(_params, session, socket) do
-    user_id = Map.get(session, "current_user")
+    user_id = Map.get(session, "user_id")
     current_user = Accounts.get_user(user_id)
     uf_options = Enum.map(@ufs, &{&1, &1})
     
@@ -37,7 +37,7 @@ defmodule BatchEcommerceWeb.Live.AddressLive.Form do
   def handle_event("save", %{"address" => address_params}, socket) do
     %{current_user: user} = socket.assigns
 
-    address_changeset = Address.changeset(%Address{}, address_params)
+    address_changeset = Accounts.change_address(%Address{}, address_params)
 
     user_params = %{
       "addresses" => [address_changeset.changes | Enum.map(user.addresses, &Map.from_struct/1)]

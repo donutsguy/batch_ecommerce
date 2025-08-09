@@ -1,6 +1,5 @@
 defmodule BatchEcommerceWeb.Live.HeaderLive.HeaderDefault do
   use BatchEcommerceWeb, :live_component
-  import BatchEcommerceWeb.Live.HeaderLive.HeaderHelpers
 
   def render(assigns) do
     assigns =
@@ -8,12 +7,13 @@ defmodule BatchEcommerceWeb.Live.HeaderLive.HeaderDefault do
       |> assign_new(:notification_count, fn -> 0 end)
       |> assign_new(:cart_count, fn -> 0 end)
       |> assign_new(:user, fn -> nil end)
+      |> assign_new(:company, fn -> nil end)
       |> assign_new(:search_query, fn -> "" end)
 
     ~H"""
     <div>
-      <.live_component 
-        module={BatchEcommerceWeb.Live.HeaderLive.HeaderHelpers} 
+      <.live_component
+        module={BatchEcommerceWeb.Live.HeaderLive.HeaderBase }
         id={"header-default-#{@id}"}
         show_cart={false}
         show_search={false}
@@ -21,6 +21,7 @@ defmodule BatchEcommerceWeb.Live.HeaderLive.HeaderDefault do
         notification_count={@notification_count}
         cart_count={@cart_count}
         user={@user}
+        company={@company}
         search_query={@search_query}
       />
     </div>

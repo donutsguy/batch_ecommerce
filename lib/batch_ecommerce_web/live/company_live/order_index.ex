@@ -1,22 +1,22 @@
 defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
   use BatchEcommerceWeb, :live_view
   alias BatchEcommerce.Orders
-  alias BatchEcommerce.Catalog
   alias BatchEcommerce.Accounts
 
   @per_page 4
 
   @impl true
-  def mount(%{"company_id" => company_id}, _session, socket) do
-
-    {:ok, 
+  def mount(%{"company_id" => company_id}, session, socket) do
+    user_id = Map.get(session, "user_id")
+    current_user = Accounts.get_user(user_id)
+    {:ok,
     socket
     |> assign(:company_id, company_id)
     |> assign(:orders, [])
     |> assign(:page, 1)
     |> assign(:per_page, @per_page)
     |> assign(:total_pages, 1)
-    |> assign(:user, %{name: "ricardo", id: 1})
+    |> assign(:user, current_user)
     |> assign(:filters, %{status: "", customer: ""})
     |> load_orders()}
   end
@@ -29,16 +29,19 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
 
   defp load_orders(socket) do
     %{company_id: company_id, page: page, per_page: per_page, filters: filters} = socket.assigns
-    
-    %{entries: orders, total_pages: total_pages} = 
+
+    %{entries: orders, total_pages: total_pages} =
+
+    %{entries: orders, total_pages: total_pages} =
       Orders.list_company_orders_paginated(
-        company_id, 
-        page, 
+        company_id,
+        page,
         per_page,
         status: filters.status,
         customer: filters.customer
       )
-    
+
+
     socket
     |> assign(:orders, orders)
     |> assign(:total_pages, total_pages)
@@ -69,17 +72,15 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
 
   @impl true
   def handle_event("filter", params, socket) do
-    IO.inspect(params, label: "PARAMS RECEBIDOS")
-    IO.inspect(socket.assigns.filters, label: "FILTROS ATUAIS")
-    
+
+
     current_filters = socket.assigns.filters
-    
+
+
     new_filters = %{
       status: Map.get(params, "status", current_filters.status),
       customer: String.trim(Map.get(params, "customer", current_filters.customer || ""))
     }
-    
-    IO.inspect(new_filters, label: "NOVOS FILTROS")
 
     {:noreply,
     socket
@@ -91,8 +92,8 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
   @impl true
   def handle_event("clear_filters", _, socket) do
     # Remove todos os filtros
-    {:noreply, 
-    socket 
+    {:noreply,
+    socket
     |> assign(:filters, %{status: "", customer: ""})
     |> assign(:page, 1)
     |> load_orders()}
@@ -101,9 +102,19 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
   @impl true
   def render(assigns) do
     ~H"""
-    <.live_component module={BatchEcommerceWeb.Live.HeaderLive.HeaderDefault} user={@user} id="HeaderDefault"/>
+    <.live_component module={BatchEcommerceWeb.Live.HeaderLive.HeaderDefault} user={@user} company={@current_company} id="HeaderDefault"/>
+
     <div class="max-w-7xl mx-auto px-4 py-8">
-          
+    <!-- Botão Voltar -->
+      <div class="mb-4">
+        <.link navigate={~p"/companies"} class="inline-flex items-center text-gray-400 hover:text-gray-700">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+          </svg>
+          Voltar
+        </.link>
+      </div>
+
     <!-- Filtros com form -->
     <div class="mb-6 bg-white p-4 rounded-lg shadow">
       <%= if @filters.customer != "" do %>
@@ -112,9 +123,11 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
             <span class="text-sm text-blue-800">
               <strong>Filtrando por cliente:</strong> <%= @filters.customer %>
             </span>
-            <button 
+            <button
+            <button
               type="button"
-              phx-click="clear_customer_filter" 
+              phx-click="clear_customer_filter"
+              phx-click="clear_customer_filter"
               class="text-blue-600 hover:text-blue-800 text-sm underline"
             >
               Remover filtro
@@ -122,13 +135,16 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
           </div>
         </div>
       <% end %>
-      
+
+
       <.form for={%{}} phx-change="filter" class="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
         <!-- Filtro por Status -->
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
-          <select 
-            name="status" 
+          <select
+            name="status"
+          <select
+            name="status"
             class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
           >
             <option value="" selected={@filters.status == ""}>Todos</option>
@@ -142,9 +158,11 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
 
         <!-- Botão Limpar Filtros -->
         <div class="flex items-end">
-          <button 
+          <button
+          <button
             type="button"
-            phx-click="clear_filters" 
+            phx-click="clear_filters"
+            phx-click="clear_filters"
             class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
           >
             Limpar Todos os Filtros
@@ -153,20 +171,21 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
       </.form>
     </div>
 
-    
+
+
     <!-- Tabela de pedidos -->
-    <div class="mt-8 flow-root">
+    <div class="mt-8 flow-root bg-white px-[10px] py-[1px] rounded-lg">
       <div class="-mx-4 -my-2 overflow-x-auto sm:-mx-6 lg:-mx-8">
         <div class="inline-block min-w-full py-2 align-middle sm:px-6 lg:px-8">
           <table class="min-w-full divide-y divide-gray-300">
-            <thead class="bg-gray-50">
+            <thead class="text-zinc-500">
               <tr>
-                <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-0">Produto</th>
-                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Cliente</th>
-                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Quantidade</th>
-                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
-                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Total</th>
-                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Ação</th>
+                <th scope="col" class="py-3.5 pl-4 pr-3 text-left text-sm font-semibold sm:pl-0">Produto</th>
+                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold">Cliente</th>
+                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold">Quantidade</th>
+                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold">Status</th>
+                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold">Total</th>
+                <th scope="col" class="px-3 py-3.5 text-left text-sm font-semibold">Ação</th>
                 <th scope="col" class="relative py-3.5 pl-3 pr-4 sm:pr-0">
                   <span class="sr-only">Ações</span>
                 </th>
@@ -178,7 +197,7 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
                   <td class="whitespace-nowrap py-5 pl-4 pr-3 text-sm sm:pl-0">
                     <div class="flex items-center">
                       <div class="h-11 w-11 flex-shrink-0">
-                        <img class="h-11 w-11 rounded-full" src={order_product.product.image_url} alt={order_product.product.name}>
+                        <img class="h-11 w-11 rounded-full" src={order_product.product.filename} alt={order_product.product.name}>
                       </div>
                       <div class="ml-4">
                         <div class="font-medium text-gray-900"><%= order_product.product.name %></div>
@@ -186,9 +205,11 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
                     </div>
                   </td>
                   <td class="whitespace-nowrap px-3 py-5 text-sm text-gray-500">
-                    <div 
+                    <div
+                    <div
                       class="text-gray-900 cursor-pointer hover:text-indigo-600 hover:underline transition-colors duration-200"
-                      phx-click="filter_by_customer" 
+                      phx-click="filter_by_customer"
+                      phx-click="filter_by_customer"
                       phx-value-customer_name={order_product.order.user.name}
                       title="Clique para filtrar por este cliente"
                     >
@@ -208,7 +229,7 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
                     R$ <%= order_product.price |> Decimal.round(2) |> Decimal.to_string(:normal) %>
                   </td>
                   <td class="relative whitespace-nowrap py-5 pl-3 pr-4 text-right text-sm font-medium sm:pr-0">
-                    <.link 
+                    <.link
                       patch={~p"/companies/#{@company_id}/orders/#{order_product.id}"}
                       class="text-indigo-600 hover:text-indigo-900"
                     >
@@ -227,10 +248,13 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
       <nav class="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-0 mt-4">
         <div class="flex flex-1 justify-between sm:hidden">
           <%= if @page > 1 do %>
-            <a 
-              href="#" 
+            <a
+              href="#"
+            <a
+              href="#"
               class="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              phx-click="nav" 
+              phx-click="nav"
+              phx-click="nav"
               phx-value-page={@page - 1}
             >
               Anterior
@@ -242,10 +266,13 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
           <% end %>
 
           <%= if @page < @total_pages do %>
-            <a 
-              href="#" 
+            <a
+              href="#"
+            <a
+              href="#"
               class="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-              phx-click="nav" 
+              phx-click="nav"
+              phx-click="nav"
               phx-value-page={@page + 1}
             >
               Próxima
@@ -258,19 +285,22 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
         </div>
         <div class="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
           <div>
-            <p class="text-sm text-gray-700">
-              Mostrando <span class="font-medium"><%= min((@page - 1) * @per_page + 1, length(@orders)) %></span> a 
-              <span class="font-medium"><%= min(@page * @per_page, length(@orders)) %></span> de 
+            <p class="text-sm text-gray-500">
+              Mostrando <span class="font-medium"><%= min((@page - 1) * @per_page + 1, length(@orders)) %></span> a
+              <span class="font-medium"><%= min(@page * @per_page, length(@orders)) %></span> de
               <span class="font-medium"><%= length(@orders) %></span> resultados
             </p>
           </div>
           <div>
             <nav class="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
               <%= if @page > 1 do %>
-                <a 
-                  href="#" 
+                <a
+                  href="#"
+                <a
+                  href="#"
                   class="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                  phx-click="nav" 
+                  phx-click="nav"
+                  phx-click="nav"
                   phx-value-page={@page - 1}
                 >
                   <span class="sr-only">Anterior</span>
@@ -288,10 +318,10 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
               <% end %>
 
               <%= for i <- max(1, @page - 2)..min(@total_pages, @page + 2) do %>
-                <a 
-                  href="#" 
-                  class={"relative inline-flex items-center px-4 py-2 text-sm font-semibold #{if i == @page, do: "bg-indigo-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600", else: "text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:outline-offset-0"}"}
-                  phx-click="nav" 
+                <a
+                  href="#"
+                  class={"relative inline-flex items-center px-4 py-2 text-sm font-semibold #{if i == @page, do: "bg-indigo-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600", else: "text-white ring-1 ring-inset ring-gray-300 hover:bg-gray-50 hover:text-indigo-600 focus:outline-offset-0"}"}
+                  phx-click="nav"
                   phx-value-page={i}
                 >
                   <%= i %>
@@ -299,10 +329,13 @@ defmodule BatchEcommerceWeb.Live.CompanyLive.OrderIndex do
               <% end %>
 
               <%= if @page < @total_pages do %>
-                <a 
-                  href="#" 
+                <a
+                  href="#"
+                <a
+                  href="#"
                   class="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0"
-                  phx-click="nav" 
+                  phx-click="nav"
+                  phx-click="nav"
                   phx-value-page={@page + 1}
                 >
                   <span class="sr-only">Próxima</span>

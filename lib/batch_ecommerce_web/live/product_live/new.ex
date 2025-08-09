@@ -6,7 +6,7 @@ defmodule BatchEcommerceWeb.Live.ProductLive.New do
   alias BatchEcommerce.Accounts.User
 
   def mount(_params, session, socket) do
-    user_id = Map.get(session, "current_user")
+    user_id = Map.get(session, "user_id")
 
     current_user = Accounts.get_user(user_id)
 
@@ -25,7 +25,7 @@ defmodule BatchEcommerceWeb.Live.ProductLive.New do
 
   def render(assigns) do
     ~H"""
-    <.live_component module={BatchEcommerceWeb.Live.HeaderLive.HeaderDefault} user={@current_user} id="HeaderDefault"/>
+    <.live_component module={BatchEcommerceWeb.Live.HeaderLive.HeaderDefault} user={@current_user} company={@current_company} id="HeaderDefault"/>
     <div class="px-4">
       <.live_component
         module={FormComponent}
@@ -36,8 +36,8 @@ defmodule BatchEcommerceWeb.Live.ProductLive.New do
       >
         <h1 class="text-2xl font-bold mb-4">Creating a product</h1>
       </.live_component>
-      
-      <.back navigate={~p"/products"} class="mt-4 inline-block text-blue-600 hover:text-blue-800">
+
+      <.back navigate={~p"/products"}>
         Back to products
       </.back>
     </div>

@@ -9,6 +9,8 @@ defmodule BatchEcommerce.Accounts.Company do
     field :cnpj, :string
     field :email, :string
     field :phone_number, :string
+    field :minio_bucket_name, :string
+    field :profile_filename, :string
 
     belongs_to :user, BatchEcommerce.Accounts.User, type: :binary_id
     has_many  :products, BatchEcommerce.Catalog.Product
@@ -23,12 +25,12 @@ defmodule BatchEcommerce.Accounts.Company do
   @doc false
   def changeset(company, attrs) do
     company
-    |> cast(attrs, [:cnpj, :name, :email, :phone_number, :user_id])
-    |> validate_required([:cnpj, :name, :email, :phone_number])
+    |> cast(attrs, [:cnpj, :name, :email, :phone_number, :user_id, :minio_bucket_name, :profile_filename])
+    |> validate_required([:cnpj, :name, :email, :phone_number, :minio_bucket_name], message: "O campo não pode estar em branco")
     |> validate_name()
     |> validate_cnpj()
-    |> validate_email(:email, message: "invalid email")
-    |> validate_phone_number(:phone_number, country: "br", message: "Invalid phone number")
+    |> validate_email(:email, message: "Endereço de e-mail inválido")
+    |> validate_phone_number(:phone_number, country: "br", message: "Número de telefone inválido")
     |> validate_uniqueness_of_fields([:cnpj, :email, :phone_number, :name, :user_id])
     |> cast_assoc(:addresses)
     |> assoc_constraint(:user)
@@ -46,8 +48,15 @@ defmodule BatchEcommerce.Accounts.Company do
     end)
   end
 
-  defp validate_cnpj(changeset),
-    do: changeset |> validate_length(:cnpj, is: 14, message: "Enter a valid CNPJ")
+  defp validate_cnpj(changeset) do
+    cnpj = get_field(changeset, :cnpj)
+
+    if Brcpfcnpj.cnpj_valid?(cnpj) do
+      changeset
+    else
+      add_error(changeset, :cnpj, "CNPJ inválido")
+    end
+  end
 
   defp validate_name(changeset),
     do: changeset |> validate_length(:name, min: 2, max: 60, message: "Enter a valid name")
