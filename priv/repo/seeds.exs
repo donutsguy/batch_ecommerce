@@ -82,6 +82,7 @@ companies = [
     "cnpj" => Brcpfcnpj.cnpj_generate(),
     "email" => "contato@techsolutions.com.br",
     "phone_number" => "11987654322",
+    "profile_filename" => "/images/empresa_1.png",
     "user_id" => BatchEcommerce.Repo.get_by!(BatchEcommerce.Accounts.User, name: "João da Silva").id,
     "addresses" => [
       %{
@@ -121,115 +122,127 @@ end)
 categories = BatchEcommerce.Repo.all(BatchEcommerce.Catalog.Category)
 category_ids = Enum.map(categories, & &1.id)
 
-products = [ 
-  %{ 
-    "name" => "Smartphone Galaxy S21", 
-    "price" => Decimal.new("3499.99"), 
-    "description" => "Celular potente", 
-    "stock_quantity" => 50, 
-    "sales_quantity" => 1, 
-    "company_id" => company.id, 
-    "discount" => 12 
-  }, 
-  %{ 
-    "name" => "Camiseta Básica", 
-    "price" => Decimal.new("59.90"), 
-    "stock_quantity" => 200, 
-    "description" => "Camiseta grande", 
-    "sales_quantity" => 3, 
-    "company_id" => company.id, 
-    "discount" => 0 
-  }, 
-  %{ 
-    "name" => "O Senhor dos Anéis", 
-    "price" => Decimal.new("89.90"), 
-    "description" => "Ótimo livro", 
-    "stock_quantity" => 30, 
-    "sales_quantity" => 1, 
-    "company_id" => company.id, 
-    "discount" => 8 
-  }, 
-  %{ 
-    "name" => "Luminária de Mesa", 
-    "price" => Decimal.new("129.90"), 
-    "description" => "Luminária fluorescente", 
-    "stock_quantity" => 45, 
-    "sales_quantity" => 2, 
-    "company_id" => company.id, 
-    "discount" => 18 
-  }, 
-  %{ 
-    "name" => "Bola de Futebol", 
-    "price" => Decimal.new("149.90"), 
-    "description" => "Bola redonda", 
-    "stock_quantity" => 100, 
-    "company_id" => company.id, 
-    "sales_quantity" => 1, 
-    "discount" => 35 
-  }, 
-  %{ 
-    "name" => "LEGO Star Wars", 
-    "price" => Decimal.new("499.90"), 
-    "description" => "Jogo bom", 
-    "stock_quantity" => 25, 
-    "company_id" => company.id, 
-    "sales_quantity" => 1, 
-    "discount" => 22 
-  }, 
-  %{ 
-    "name" => "Notebook Dell Inspiron", 
-    "price" => Decimal.new("2799.99"), 
-    "description" => "Laptop para trabalho e estudos", 
-    "stock_quantity" => 35, 
-    "sales_quantity" => 1, 
-    "company_id" => company.id, 
-    "discount" => 15 
-  }, 
-  %{ 
-    "name" => "Tênis Nike Air Max", 
-    "price" => Decimal.new("349.90"), 
-    "description" => "Tênis esportivo confortável", 
-    "stock_quantity" => 80, 
-    "sales_quantity" => 1, 
-    "company_id" => company.id, 
-    "discount" => 25 
-  }, 
-  %{ 
-    "name" => "Cafeteira Elétrica", 
-    "price" => Decimal.new("199.90"), 
-    "description" => "Cafeteira automática 12 xícaras", 
-    "stock_quantity" => 40, 
-    "sales_quantity" => 1, 
-    "company_id" => company.id, 
-    "discount" => 10 
-  }, 
-  %{ 
-    "name" => "Fone de Ouvido Bluetooth", 
-    "price" => Decimal.new("179.90"), 
-    "description" => "Fone sem fio com cancelamento de ruído", 
-    "stock_quantity" => 65, 
-    "sales_quantity" => 1, 
-    "company_id" => company.id, 
-    "discount" => 20 
-  }, 
-  %{ 
-    "name" => "Mochila Escolar", 
-    "price" => Decimal.new("89.90"), 
-    "description" => "Mochila resistente com vários compartimentos", 
-    "stock_quantity" => 120, 
-    "sales_quantity" => 2, 
-    "company_id" => company.id, 
-    "discount" => 5 
-  }, 
-  %{ 
-    "name" => "Panela de Pressão Elétrica", 
-    "price" => Decimal.new("249.90"), 
-    "description" => "Panela elétrica multifuncional 6L", 
-    "stock_quantity" => 30, 
-    "sales_quantity" => 1, 
-    "company_id" => company.id, 
-    "discount" => 30 
-  } 
+products = [
+  %{
+    "name" => "Smartphone Galaxy S21",
+    "price" => Decimal.new("3499.99"),
+    "description" => "Celular potente",
+    "stock_quantity" => 50,
+    "sales_quantity" => 1,
+    "company_id" => company.id,
+    "discount" => 12,
+    "filename" => "/images/produto_5.jpg"
+  },
+  %{
+    "name" => "Camiseta Básica",
+    "price" => Decimal.new("59.90"),
+    "stock_quantity" => 200,
+    "description" => "Camiseta grande",
+    "sales_quantity" => 3,
+    "company_id" => company.id,
+    "discount" => 0,
+    "filename" => "/images/produto.webp"
+  },
+  %{
+    "name" => "O Senhor dos Anéis",
+    "price" => Decimal.new("89.90"),
+    "description" => "Ótimo livro",
+    "stock_quantity" => 30,
+    "sales_quantity" => 1,
+    "company_id" => company.id,
+    "discount" => 8,
+    "filename" => "/images/produto_4.webp"
+  },
+  %{
+    "name" => "Luminária de Mesa",
+    "price" => Decimal.new("129.90"),
+    "description" => "Luminária fluorescente",
+    "stock_quantity" => 45,
+    "sales_quantity" => 2,
+    "company_id" => company.id,
+    "discount" => 18,
+    "filename" => "/images/produto_3.webp"
+  },
+  %{
+    "name" => "Bola de Futebol",
+    "price" => Decimal.new("149.90"),
+    "description" => "Bola redonda",
+    "stock_quantity" => 100,
+    "company_id" => company.id,
+    "sales_quantity" => 1,
+    "discount" => 35,
+    "filename" => "/images/produto_2.webp"
+  },
+  %{
+    "name" => "LEGO Star Wars",
+    "price" => Decimal.new("499.90"),
+    "description" => "Jogo bom",
+    "stock_quantity" => 25,
+    "company_id" => company.id,
+    "sales_quantity" => 1,
+    "discount" => 22,
+    "filename" => "/images/produto_1.webp"
+  },
+  %{
+    "name" => "Notebook Dell Inspiron",
+    "price" => Decimal.new("2799.99"),
+    "description" => "Laptop para trabalho e estudos",
+    "stock_quantity" => 35,
+    "sales_quantity" => 1,
+    "company_id" => company.id,
+    "discount" => 15,
+    "filename" => "/images/produto_16.webp"
+  },
+  %{
+    "name" => "Tênis Nike Air Max",
+    "price" => Decimal.new("349.90"),
+    "description" => "Tênis esportivo confortável",
+    "stock_quantity" => 80,
+    "sales_quantity" => 1,
+    "company_id" => company.id,
+    "discount" => 25,
+    "filename" => "/images/produto_17.webp"
+  },
+  %{
+    "name" => "Cafeteira Elétrica",
+    "price" => Decimal.new("199.90"),
+    "description" => "Cafeteira automática 12 xícaras",
+    "stock_quantity" => 40,
+    "sales_quantity" => 1,
+    "company_id" => company.id,
+    "discount" => 10,
+    "filename" => "/images/produto_18.webp"
+  },
+  %{
+    "name" => "Fone de Ouvido Bluetooth",
+    "price" => Decimal.new("179.90"),
+    "description" => "Fone sem fio com cancelamento de ruído",
+    "stock_quantity" => 65,
+    "sales_quantity" => 1,
+    "company_id" => company.id,
+    "discount" => 20,
+    "filename" => "/images/produto_14.webp"
+  },
+  %{
+    "name" => "Mochila Escolar",
+    "price" => Decimal.new("89.90"),
+    "description" => "Mochila resistente com vários compartimentos",
+    "stock_quantity" => 120,
+    "sales_quantity" => 2,
+    "company_id" => company.id,
+    "discount" => 5,
+    "filename" => "/images/produto_15.webp"
+  },
+  %{
+    "name" => "Panela de Pressão Elétrica",
+    "price" => Decimal.new("249.90"),
+    "description" => "Panela elétrica multifuncional 6L",
+    "stock_quantity" => 30,
+    "sales_quantity" => 1,
+    "company_id" => company.id,
+    "discount" => 30,
+    "filename" => "/images/produto_13.webp"
+  }
 ]
 
 products_with_categories =
@@ -241,7 +254,8 @@ products_with_categories =
   end)
 
 Enum.each(products_with_categories, fn product ->
-  BatchEcommerce.Catalog.create_product(product, "https://example.com/images/panela-eletrica.jpg")
+  filename = product["filename"]
+  BatchEcommerce.Catalog.create_product(product, filename)
 end)
 
 products = BatchEcommerce.Repo.all(BatchEcommerce.Catalog.Product)

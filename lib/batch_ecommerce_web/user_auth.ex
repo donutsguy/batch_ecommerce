@@ -37,7 +37,7 @@ defmodule BatchEcommerceWeb.UserAuth do
     |> put_token_in_session(token)
     |> put_user_id_in_session(user.id)
     |> maybe_write_remember_me_cookie(token, params)
-    |> redirect(to: "/products")
+    |> redirect(to: "/login")
   end
 
   defp maybe_write_remember_me_cookie(conn, token, %{"remember_me" => "true"}) do

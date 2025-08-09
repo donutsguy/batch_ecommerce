@@ -23,7 +23,7 @@ defmodule BatchEcommerceWeb.Live.ProductLive.Index do
       search_query: "",
       no_products_message: nil,
       page: 1,
-      per_page: 10,
+      per_page: 9,
       products: [],
       meta: nil,
       current_user: current_user

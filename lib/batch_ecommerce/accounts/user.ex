@@ -9,7 +9,7 @@ defmodule BatchEcommerce.Accounts.User do
   @derive {Jason.Encoder,
            only: [:id, :cpf, :name, :email, :phone_number, :birth_date, :addresses]}
 
-  @required_fields_insert [:cpf, :name, :email, :phone_number, :birth_date, :password]
+  @required_fields_insert [:cpf, :name, :email, :phone_number, :birth_date, :password, :profile_filename]
   @required_fields_update [:name, :email, :phone_number, :birth_date]
   @unique_fields [:email, :cpf, :phone_number]
 
@@ -42,13 +42,13 @@ defmodule BatchEcommerce.Accounts.User do
   def form_changeset(user, attrs) do
     user
     |> cast(attrs, [:password_hash | @required_fields_insert])
-    |> validate_form_fields(@required_fields_insert)
+    |> validate_form_fields([:cpf, :name, :email, :phone_number, :birth_date, :password])
   end
 
   def insert_changeset(user, attrs) do
     user
     |> cast(attrs, [:password_hash | @required_fields_insert])
-    |> validate_form_fields(@required_fields_insert)
+    |> validate_form_fields([:cpf, :name, :email, :phone_number, :birth_date, :password])
     |> validate_uniqueness_of_fields(@unique_fields)
     |> password_hash()
   end

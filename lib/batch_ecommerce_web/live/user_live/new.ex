@@ -5,6 +5,10 @@ defmodule BatchEcommerceWeb.UserLive.New do
 
   def render(assigns) do
     ~H"""
+    <.live_component
+    module={BatchEcommerceWeb.Live.HeaderLive.HeaderBase}
+    id="header-base"
+    />
     <div class="px-4">
     <!-- Botão Voltar -->
       <div class="my-4 mx-[250px]">
@@ -22,7 +26,7 @@ defmodule BatchEcommerceWeb.UserLive.New do
           id="new-user"
           user={%User{}}
           action={@live_action}
-          patch={~p"/products"}
+          patch={~p"/login"}
         >
           <h1 class="text-2xl font-bold mb-4">Creating a user</h1>
         </.live_component>

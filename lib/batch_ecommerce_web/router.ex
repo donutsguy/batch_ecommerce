@@ -43,10 +43,29 @@ defmodule BatchEcommerceWeb.Router do
       live "/register", UserLive.New, :new
     end
 
-    live "/sobre", Live.AboutLive
+    live "/", Live.ProductLive.Index, :index
+    live "/reset-password", UserForgotPasswordLive
+    live "/about", Live.AboutLive
     live "/products", Live.ProductLive.Index, :index
     live "/users/:id", Live.UserLive.Show, :show
   end
+
+    #scope de usuário logado e com empresa
+    scope "/", BatchEcommerceWeb.Live do
+      pipe_through [:browser]
+
+      live_session :require_authenticated_and_has_company,
+        on_mount: {BatchEcommerceWeb.UserAuth, :require_authenticated_and_has_company} do
+        live "/companies", CompanyLive.Show, :show
+        live "/companies/:id/edit", CompanyLive.Edit, :edit
+        live "/companies/:company_id/products", CompanyLive.ProductIndex, :product_index
+        live "/companies/:company_id/orders", CompanyLive.OrderIndex, :order_index
+        live "/companies/:company_id/orders/:order_id", OrderLive.ShowCompany, :order_index
+        live "/products/new", ProductLive.New, :new
+        live "/products/:product_id/edit", ProductLive.Edit, :edit
+        #live "/companies/:id/orders", OrderLive.Index, :index REVIEW: rota duplicada
+      end
+    end
 
   #scope de usuarios logados com o liveview
   scope "/", BatchEcommerceWeb.Live do
@@ -65,22 +84,7 @@ defmodule BatchEcommerceWeb.Router do
     end
   end
 
-  #scope de usuário logado e com empresa
-  scope "/", BatchEcommerceWeb.Live do
-    pipe_through [:browser]
 
-    live_session :require_authenticated_and_has_company,
-      on_mount: {BatchEcommerceWeb.UserAuth, :require_authenticated_and_has_company} do
-      live "/companies", CompanyLive.Show, :show
-      live "/companies/:id/edit", CompanyLive.Edit, :edit
-      live "/companies/:company_id/products", CompanyLive.ProductIndex, :product_index
-      live "/companies/:company_id/orders", CompanyLive.OrderIndex, :order_index
-      live "/companies/:company_id/orders/:order_id", OrderLive.ShowCompany, :order_index
-      live "/products/new", ProductLive.New, :new
-      live "/products/:product_id/edit", ProductLive.Edit, :edit
-      #live "/companies/:id/orders", OrderLive.Index, :index REVIEW: rota duplicada
-    end
-  end
 
   scope "/api/swagger" do
     forward "/", PhoenixSwagger.Plug.SwaggerUI, otp_app: :batch_ecommerce, swagger_file: "swagger.json"

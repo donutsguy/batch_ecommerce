@@ -28,7 +28,7 @@ defmodule BatchEcommerceWeb.UserLoginLive do
 
         <:actions>
           <.input field={@form[:remember_me]} type="checkbox" label="Manter-me logado" />
-          <.link href={~p"/users/reset_password"} class="text-sm text-gray-500 hover:text-gray-800 font-semibold">
+          <.link href={~p"/reset-password"} class="text-sm text-gray-500 hover:text-gray-800 font-semibold">
             Esqueceu a senha?
           </.link>
         </:actions>
