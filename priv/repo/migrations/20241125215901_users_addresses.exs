@@ -7,7 +7,6 @@ defmodule BatchEcommerce.Repo.Migrations.UsersAddresses do
       add :address_id, references(:addresses, on_delete: :delete_all)
     end
 
-    create index(:users_addresses, [:user_id])
     create unique_index(:users_addresses, [:user_id, :address_id])
   end
 end
